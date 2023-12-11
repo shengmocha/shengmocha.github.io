@@ -162,7 +162,7 @@ yat:
 # Page default value
 # defaults:
 #   home:
-     heading: "Welcome to shengmocha's blog"
+#     heading: "Welcome to shengmocha's blog"
 #     subheading: "Your awesome subheading"
 #     banner: "Your image url"
 
