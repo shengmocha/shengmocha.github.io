@@ -160,10 +160,10 @@ yat:
 #   - about.md
 
 # Page default value
-# defaults:
-#   home:
-#     heading: "Welcome to shengmocha's blog"
-#     subheading: "Your awesome subheading"
+defaults:
+  home:
+    heading: "Welcome to shengmocha's blog"
+    subheading: "This is a record of Shengmocha's study experience."
 #     banner: "Your image url"
 
 # Banner default settings
