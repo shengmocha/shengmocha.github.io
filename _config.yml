@@ -24,7 +24,7 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Welcome to shengmocha's blog
+title: shengmocha's blog
 email: cuizhimin12@gmail.com
 author: shengmocha
 
@@ -162,7 +162,7 @@ yat:
 # Page default value
 # defaults:
 #   home:
-#     heading: "Your awesome heading"
+     heading: "Welcome to shengmocha's blog"
 #     subheading: "Your awesome subheading"
 #     banner: "Your image url"
 
