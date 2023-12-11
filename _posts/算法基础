@@ -1,0 +1,2843 @@
+# 算法基础
+
+![picture1](D:\Program Files (x86)\笔记\图片\picture1.png)
+
+****
+
+## 动态规划(dp)
+
+### 背包问题
+
+![picture2](D:\Program Files (x86)\笔记\图片\picture2.png)
+
+#### 01背包问题
+
+***
+
+##### 1. 题目介绍
+
+有 $N$ 件物品和一个容量是 $V$ 的背包。每件物品只能使用一次。
+
+第 $i$ 件物品的体积是 $v_i$，价值是 $w_i$。
+
+求解将哪些物品装入背包，可使这些物品的总体积不超过背包容量，且总价值最大。 
+输出最大价值。
+
+###### 输入格式
+
+第一行两个整数，$N，V$，用空格隔开，分别表示物品数量和背包容积。
+
+接下来有 $N$ 行，每行两个整数 $v_i, w_i$，用空格隔开，分别表示第 $i$ 件物品的体积和价值。
+
+###### 输出格式
+
+输出一个整数，表示最大价值。
+
+###### 数据范围
+
+$0 \lt N, V \le 1000$ 
+$0 \lt v_i, w_i \le 1000$
+
+###### 输入样例
+
+    4 5
+    1 2
+    2 4
+    3 4
+    4 5
+
+
+###### 输出样例：
+
+    8
+
+「0-1 背包」是较为简单的动态规划问题，也是其余背包问题的基础。
+
+动态规划是不断决策求最优解的过程，「0-1 背包」即是不断对第 $i$ 个物品的做出决策，「0-1」正好代表不选与选两种决定。
+
+***
+
+##### 2. 题解(C++)
+
+###### 2.1 版本1 二维
+
+（1）状态`f[i][j]`定义：**前 $i$ 个物品，背包容量 $j$ 下的最优解（最大价值）：**
+
+* 当前的状态依赖于之前的状态，可以理解为从初始状态f[0][0] = 0开始决策，有 NN 件物品，则需要 NN 次决 策，每一次对第 ii 件物品的决策，状态f[i][j]不断由之前的状态更新而来。
+
+（2）当前背包容量不够（j < v[i]），没得选，因此前 $i$ 个物品最优解即为前 $i−1$ 个物品最优解：
+
+* 对应代码：`f[i][j] = f[i - 1][j]`。
+
+（3）当前背包容量够，可以选，因此需要决策选与不选第 $i$ 个物品：
+
+* 选：`f[i][j] = f[i - 1][j - v[i]] + w[i]`。
+* 不选：`f[i][j] = f[i - 1][j] `。
+* 我们的决策是如何取到最大价值，因此以上两种情况取 `max()` 。
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+int v[N], w[N];
+int f[N][N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	for (int i=1; i<=n; i++)
+		cin >> v[i] >> w[i];
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=1; j<=m; j++)
+		{
+			f[i][j] = f[i-1][j];
+			if (j>=v[i]) f[i][j] = max(f[i][j], f[i-1][j-v[i]]+w[i]);
+		}
+	}
+	
+	cout << f[n][m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+###### 2.2 版本2 一维
+
+将状态`f[i][j]`优化到一维`f[j]`，实际上只需要做一个**等价变形**。
+
+为什么可以这样变形呢？我们定义的状态`f[i][j]`可以求得任意合法的 $i$ 与 $j$ 最优解，但题目只需要求得最终状态`f[n][m]`，因此我们只需要一维的空间来更新状态。
+
+（1）状态`f[j]`定义：$N$ 件物品，背包容量 $j$ 下的最优解。
+
+（2）注意枚举背包容量 ` j ` 必须从 ` m ` 开始。
+
+（3）**为什么一维情况下枚举背包容量需要逆序？**在二维情况下，状态`f[i][j]`是由上一轮``i - 1``的状态得来的，` f[i][j] `与` f[i - 1][j] `是独立的。而优化到一维后，如果我们还是正序，则有` f[较小体积] `更新到` f[较大体积] `，则有可能本应该用第` i-1 `轮的状态却用的是第` i `轮的状态。
+
+（4）若 $j$ 从小到大，` f[j-v[i]] `中，由于` j-v[i] `小于` j `，` f[j-v[i]] `已经在 ` i ` 这层循环被计算了，而我们想要的` f[j-v[i]] `应该是 ` i-1 ` 层循环里面的，所以j从大到小的话保证此时的` f[j-v[i]] `还未被计算，也就是第 `i-1 `层的数据。
+
+（5）简单来说，一维情况正序更新状态` f[j] `需要用到前面计算的状态已经被「覆盖」，逆序则不会有这样的问题。
+
+状态转移方程为：`f[j] = max(f[j], f[j - v[i]] + w[i]`。
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+int v[N], w[N];
+int f[N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	for (int i=1; i<=n; i++)
+		cin >> v[i] >> w[i];
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=m; j>=v[i]; j--)
+		{
+			f[j] = max(f[j], f[j-v[i]]+w[i]);
+		}
+	}
+	
+	cout << f[m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+**关于状态` f[j] `的说明**
+
+二维下的状态定义` f[i][j] `是前 $i$ 件物品，背包容量 $j$ 下的最大价值。一维下，少了前 $i$ 件物品这个维度，我们的代码中决策到第 $i$ 件物品（循环到第i轮），f[j]就是前i轮已经决策的物品且背包容量 $j$ 下的最大价值。
+
+因此当执行完循环结构后，由于已经决策了所有物品，` f[j] `就是所有物品背包容量 $j$ 下的最大价值。即一维` f[j] `等价于二维` f[n][j] `。
+
+****
+
+#### 完全背包问题
+
+![picture3](D:\Program Files (x86)\笔记\图片\picture3.jpg)
+
+***
+
+##### 1.题目介绍
+
+有 $N$ 种物品和一个容量是 $V$ 的背包，每种物品都有无限件可用。
+
+第 $i$ 种物品的体积是 $v_i$，价值是 $w_i$。
+
+求解将哪些物品装入背包，可使这些物品的总体积不超过背包容量，且总价值最大。  
+输出最大价值。
+
+###### 输入格式
+
+第一行两个整数，$N，V$，用空格隔开，分别表示物品种数和背包容积。
+
+接下来有 $N$ 行，每行两个整数 $v_i, w_i$，用空格隔开，分别表示第 $i$ 种物品的体积和价值。
+
+###### 输出格式
+
+输出一个整数，表示最大价值。
+
+###### 数据范围
+
+$0 \lt N, V \le 1000$ 
+$0 \lt v_i, w_i \le 1000$
+
+###### 输入样例
+
+    4 5
+    1 2
+    2 4
+    3 4
+    4 5
+
+
+###### 输出样例：
+
+    10
+
+***
+
+##### 2.题解(C++)
+
+###### 2.1 版本1 三维 
+
+**时间复杂度O(nm^2^)，容易TLE，不推荐使用**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+int v[N], w[N];
+int f[N][N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	for (int i=1; i<=n; i++)
+		cin >> v[i] >> w[i];
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=1; j<=m; j++)
+		{
+			for (int k=0; k*v[i]<=j; k++)
+			{
+				f[i][j] = max(f[i][j], f[i-1][j-k*v[i]]+k*w[i]);
+			}
+		}
+	}
+	
+	cout << f[n][m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+###### 2.2 版本1 二维
+
+**我们列举一下更新次序的内部关系：**
+
+```
+f[i , j ] = max( f[i-1,j] , f[i-1,j-v]+w ,  f[i-1,j-2*v]+2*w , f[i-1,j-3*v]+3*w , .....)
+f[i , j-v]= max(            f[i-1,j-v]   ,  f[i-1,j-2*v] + w , f[i-1,j-3*v]+2*w , .....)
+由上两式，可得出如下递推关系： 
+                        f[i][j]=max(f[i,j-v]+w , f[i-1][j])
+```
+
+**有了上面的关系，那么其实k循环可以不要了，核心代码优化成这样：**
+
+```
+for (int i=1; i<=n; i++)
+	{
+		for (int j=1; j<=m; j++)
+		{
+		    f[i][j] = f[i-1][j];
+		    if (j>=v[i]) f[i][j] = max(f[i][j], f[i][j-v[i]]+w[i]);
+		}
+	}
+```
+
+**这个代码和01背包的非优化写法很像啊!!!我们对比一下，下面是01背包的核心代码**
+
+```
+for (int i=1; i<=n; i++)
+{
+    for (int j=1; j<=m; j++)
+    {
+        f[i][j] = f[i-1][j];
+        if (j>=v[i]) f[i][j] = max(f[i][j], f[i-1][j-v[i]]+w[i]);
+    }
+}
+```
+
+**两个代码其实只有一句不同（注意下标）**
+
+`f[i][j] = max(f[i][j],f[i-1][j-v[i]]+w[i]);//01背包`
+
+`f[i][j] = max(f[i][j],f[i][j-v[i]]+w[i]);//完全背包问题`
+
+**综上所述，完全背包的二维写法如下：**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+int v[N], w[N];
+int f[N][N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	for (int i=1; i<=n; i++)
+		cin >> v[i] >> w[i];
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=0; j<=m; j++)
+		{
+		    f[i][j] = f[i-1][j];
+		    if (j>=v[i]) f[i][j] = max(f[i][j], f[i][j-v[i]]+w[i]);
+		}
+	}
+	
+	cout << f[n][m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+###### 2.3 版本1 一维
+
+**因为和01背包代码很相像，我们很容易想到进一步优化。核心代码可以改成下面这样**
+
+```
+for (int i=1; i<=n; i++)
+{
+    for (int j=v[i]; j<=m; j++)
+    {
+	    f[j] = max(f[j], f[j-v[i]]+w[i]);
+    }
+}
+```
+
+**综上所述，完全背包的最终写法如下：**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+int v[N], w[N];
+int f[N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	for (int i=1; i<=n; i++)
+		cin >> v[i] >> w[i];
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=v[i]; j<=m; j++)
+		{
+		    f[j] = max(f[j], f[j-v[i]]+w[i]);
+		}
+	}
+	
+	cout << f[m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+#### 多重背包问题
+
+##### 1.题目介绍
+
+有 $N$ 种物品和一个容量是 $V$ 的背包。
+
+第 $i$ 种物品最多有 $s_i$ 件，每件体积是 $v_i$，价值是 $w_i$。
+
+求解将哪些物品装入背包，可使物品体积总和不超过背包容量，且价值总和最大。 
+输出最大价值。
+
+###### 输入格式
+
+第一行两个整数，$N，V$，用空格隔开，分别表示物品种数和背包容积。
+
+接下来有 $N$ 行，每行三个整数 $v_i, w_i, s_i$，用空格隔开，分别表示第 $i$ 种物品的体积、价值和数量。
+
+###### 输出格式
+
+输出一个整数，表示最大价值。
+
+###### 数据范围
+
+$0 \lt N, V \le 100$ 
+$0 \lt v_i, w_i, s_i \le 100$
+
+###### 输入样例
+
+    4 5
+    1 2 3
+    2 4 1
+    3 4 3
+    4 5 2
+
+
+###### 输出样例：
+
+    10
+
+***
+
+##### 2.题解(C++)
+
+###### 2.1 朴素版
+
+**时间复杂度 _O(N * V * S)_ **
+
+**多重背包问题可以看做被限制的完全背包，完全背包每个物品都是无限个，多重背包变成了有限个，所以只需要在判断第 $i$ 个物品的数量时加入一个限制条件就可以了。**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 110;
+
+int v[N], w[N], s[N];
+int f[N][N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	for (int i=1; i<=n; i++)
+		cin >> v[i] >> w[i] >> s[i];
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=0; j<=m; j++)
+		{
+			for (int k=0; k*v[i]<=j&&k<=s[i]; k++)
+			{
+				f[i][j] = max(f[i][j], f[i-1][j-k*v[i]]+k*w[i]);
+			}
+		}
+	}
+	
+	cout << f[n][m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+###### 2.2 二进制优化版
+
+**时间复杂度 _O(N * V * log~S~)_ **
+
+2.2.1 为什么多重背包不能像完全背包一样去优化
+
+**在完全背包中,两个状态转移方程：**
+
+$f[i,j]=max(f[i−1,j],f[i−1,j−v]+w,f[i−1,j−2v]+2w,f[i−1,j−3v]+3w,.....)$
+$f[i,j−v]=max(f[i−1,j−v],f[i−1,j−2v]+w,f[i−1,j−2v]+2w,.....)$
+通过上述比较，可以得到 $f[i][j]=max(f[i−1][j],f[i][j−v]+w)f[i][j]=max(f[i−1][j],f[i][j−v]+w)。$
+
+**在多重背包,两个状态转移方程：**
+
+$f[i,j] = max(f[i−1,j],f[i−1,j−v]+w,f[i−1,j−2v]+2w,.....f[i−1,j−Sv]+Sw,)$
+$f[i,j−v]= max(f[i−1,j−v],f[i−1,j−2v]+w,.....f[i−1,j−Sv]+(S−1)w,f[i−1,j−(S+1)v]+Sw)$
+
+***
+
+**怎么比完全背包方程比较就多出了一项?**
+其实，一般从实际含义出发来考虑即可，这里是在分析 $f[i,j−w]$ 这个状态的表达式，首先这个状态的含义是 从前 $i$ 个物品中选，且总体积不超过 $j-w$ 的最大价值， 我们现在最多只能选 $s$ 个物品，因此如果我们选 $s$ 个第 $i$ 个物品，那么体积上就要减去 $s∗v$ ,价值上就要加上 $s∗w$ ，那更新到状态中去就是 $f[i−1,j−v−s∗v]+s∗w$
+
+**为什么完全背包不会有最后一项？**
+完全背包由于对每种物品没有选择个数的限制，所以只要体积够用就可以一直选，没有最后一项。
+
+**所以多重背包不能像完全背包一样去优化。**
+
+***
+
+2.2.2 二进制优化
+
+**我们首先确认三点：**
+
+（1）我们知道转化成01背包的基本思路就是：判断每件物品取了好呢还是不取好。
+
+（2）我们知道任意一个实数可以由二进制数来表示，也就是$2^0 2^k$其中一项或几项的和。
+
+（3）这里多重背包问的就是每件物品取多少件可以获得最大价值。
+
+**分析：**
+
+* 如果直接遍历转化为01背包问题，是每次都拿一个来问，取了好还是不取好。那么根据数据范围，这样的时间复杂度是$O(n^3)$，也就是$10^9$，这样是毫无疑问是会TLE的。
+
+* 假如10个取7个好，那么在实际的遍历过程中在第7个以后经过状态转移方程其实已经是选择“不取”好了。现在，用二进制思想将其分堆，分成$k+1$个分别有$2^k$个的堆，然后拿这一堆一堆去问，我是取了好呢，还是不取好呢，经过dp选择之后，结果和拿一个一个来问的结果是完全一样的，因为dp选择的是最优结果，而根据第二点任意一个实数都可以用二进制来表示，如果最终选出来10个取7个是最优的在分堆的选择过程中分成了$2^0=1,2^1=2,2^2=4,10−7=3$ 这四堆，然后去问四次，也就是拿去走dp状态转移方程，走的结果是第一堆1个，取了比不取好，第二堆2个，取了比不取好，第三堆四个，取了比不取好，第四堆8个，取了还不如不取，最后依旧是取了$1+2+4=7$个。
+
+取这样一个例子:要求在一堆苹果选出n个苹果。我们传统的思维是一个一个地去选，选够n个苹果就停止。这样选择的次数就是n次
+
+**二进制优化思维就是：**现在给出一堆苹果和10个箱子，选出n个苹果。将这一堆苹果分别按照$1,2,4,8,16,.....512$ 分到10个箱子里，那么由于任何一个数字 $x∈[0,1023]$ 都可以从这10个箱子里的苹果数量表示出来，但是这样选择的次数就是 ≤10次≤10次 。
+
+比如：
+
+- 如果要拿 $1001$ 次苹果，传统就是要拿 $1001$ 次；二进制的思维，就是拿7个箱子就行（分别是装有$512、256、128、64、32、8、1$个苹果的这7个箱子）,这样一来，**1001次操作就变成7次操作就行了。**
+
+这样利用二进制优化，时间复杂度就从 $O(n^3)$ 降到 $O(n^2logS)$ 。
+
+***
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 25000;
+
+int v[N], w[N];
+int f[N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	
+    //在输入时就将物品分成若干个子物品
+	int cnt = 0;
+	for (int i=1; i<=n; i++)
+	{
+		int a,b,s;
+		cin >> a >> b >> s;
+		int k = 1;
+		while (k<=s)
+		{
+			cnt ++;
+			v[cnt] = a * k;
+			w[cnt] = b * k;
+			s -= k;
+			k *= 2;
+		}
+		if (s)
+		{
+			cnt ++;
+			v[cnt] = a * s;
+			w[cnt] = b * s;
+		}
+	}
+	
+    //分完后当做01背包来处理
+	n = cnt;
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=m; j>=v[i]; j--)
+		{
+			f[j] = max(f[j], f[j-v[i]]+w[i]);
+		}
+	}
+	
+	cout << f[m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+#### 分组背包问题
+
+![picture4](D:\Program Files (x86)\笔记\图片\picture4.png)
+
+##### 1.题目介绍
+
+有 $N$ 组物品和一个容量是 $V$ 的背包。
+
+每组物品有若干个，同一组内的物品最多只能选一个。  
+每件物品的体积是 $v_{ij}$，价值是 $w_{ij}$，其中 $i$ 是组号，$j$ 是组内编号。
+
+求解将哪些物品装入背包，可使物品总体积不超过背包容量，且总价值最大。
+
+输出最大价值。
+
+***
+
+##### 2.题解(C++)
+
+分组背包问题可以分组解决，在每一组中判断选第几个(可以不选)。
+
+* 对于每组 $s$ 个物品，有 $s+1$ 种选法：$f_j=max(f_j,f_{j-v_0}+w_0,f_{j-v_1}+w_1, \ldots ,f_{j-v_s}+w_s)$ 就是说可以不选（选 $0$ 个），选 $1$ 个，选 $2$ 个&hellip;选 $s$ 个；
+
+* 所以，我们先循环枚举所有体积，再循环枚举所有选择，最后得出状态转移方程：$f_j=max(f_j,f_{j-v_k}+w_k)$，其中 $k$ 是枚举所有选择中的循环变量。
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 110;
+
+int v[N][N], w[N][N], s[N];
+int f[N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	
+	for (int i=1; i<=n; i++)
+	{
+		cin >> s[i];
+		for (int j=1; j<=s[i]; j++)
+			cin >> v[i][j] >> w[i][j];
+	}
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=m; j>=0; j--)
+		{
+			for (int k=1; k<=s[i]; k++)
+			{
+			    if (v[i][k]<=j) //只有当前背包容量 j≥vk 时，k 才能选，否则装不下
+				    f[j] = max(f[j], f[j-v[i][k]]+w[i][k]);
+			}
+		}
+	}
+	
+	cout << f[m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+### 线性DP
+
+#### 数字三角形
+
+###### 1.题目介绍
+
+给定一个如下图所示的数字三角形，从顶部出发，在每一结点可以选择移动至其左下方的结点或移动至其右下方的结点，一直走到底层，要求找出一条路径，使路径上的数字的和最大。
+
+            7
+          3   8
+        8   1   0
+      2   7   4   4
+    4   5   2   6   5
+
+***
+
+###### 2.题解(C++)
+
+$f(i,j)$ 含义: 从顶点出发到第 $i$ 行第 $j$ 个数的最大路径和
+
+每个点有两种选择: **由左上方走到该点**和 **由右上方走到该点**
+对应的子问题为: $f(i-1, j)$ 和 $f(i-1, j+1)$
+注意判断边界条件 $j$ 和 $j+1$ 不能越界 $(1,i)$
+结果:  $f(n,j)$ 里的最大值, $j \in (1, n)$
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 510, INF = 1e9; // INF表示无穷大
+
+int a[N][N];
+int f[N][N]; 
+
+void solve()
+{
+	int n;
+	cin >> n;
+	for (int i=1; i<=n; i++)
+		for (int j=1; j<=i; j++)
+			cin >> a[i][j];
+	
+	for (int i=0; i<=n; i++)
+		for (int j=0; j<=i+1; j++)
+			f[i][j] = -INF; // 将所有数初始化为负无穷大
+	
+	for (int i=1; i<=n; i++)
+	{
+	    f[1][1] = a[1][1]; //起点的最大值就是它本身
+		for (int j=1; j<=i; j++)
+			f[i][j] = max(f[i-1][j-1]+a[i][j], f[i-1][j]+a[i][j]);
+	}
+	
+	int res = -INF;
+	for (int i=1; i<=n; i++)
+		res = max(res, f[n][i]);
+	
+	cout << res << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+#### 最长上升子序列
+
+##### 1.题目介绍
+
+给定一个长度为 $N$ 的数列，求数值严格单调递增的子序列的长度最长是多少。
+
+***
+
+##### 2.题解(C++)
+
+###### 2.1算法1
+
+**(动态规划) $O(n^2)$ **
+
+* 状态表示：`f[i]`表示**从第一个数字开始算，以`a[i]`结尾的最大的上升序列。**
+* 状态计算（集合划分）：j∈(0,1,2,...,i-1),在a[j]<a[i]时，`f[i] = max(f[i], f[j]+1)`，如果前面没有比 $i$ 小的数，`f[i] = 1`。
+* 遍历 $f$ 数组得最大值 `res` 。
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+int a[N];
+int f[N];
+ 
+void solve()
+{
+	int n;
+	cin >> n;
+	for (int i=1; i<=n; i++)
+		cin >> a[i];
+	
+	for (int i=1; i<=n; i++)
+	{
+		f[i] = 1; // 只有 i 自己时 
+		for (int j=1; j<i; j++)
+		{
+			if (a[j]<a[i])
+				f[i] = max(f[i], f[j]+1); 
+		}
+	}
+	
+	int res = 0;
+	for (int i=1; i<=n; i++)
+		res = max(res, f[i]);
+	
+	cout << res << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+###### 2.2算法二
+
+***
+
+#### 最长公共子序列
+
+##### 1.题目介绍
+
+给定两个长度分别为 $N$ 和 $M$ 的字符串 $A$ 和 $B$，求既是 $A$ 的子序列又是 $B$ 的子序列的字符串长度最长是多少。
+
+##### 2.题解(C++)
+
+这道题的状态分成两半考虑比较方便，按两个序列末尾的字符是不是相等来区分。
+
+![picture5](D:\Program Files (x86)\笔记\图片\picture5.png)
+
+如果两个字符相等，就可以直接转移到`f[i-1][j-1]`，不相等的话，两个字符一定有一个可以抛弃，可以对`f[i-1][j],f[i][j-1]`两种状态取max来转移。
+
+![picture6](D:\Program Files (x86)\笔记\图片\picture6.png)
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+char a[N], b[N];
+int f[N][N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> m;
+	cin >> a + 1 >> b + 1;
+	
+	for (int i=1; i<=n; i++)
+	{
+		for (int j=1; j<=m; j++)
+		{
+			if (a[i]==b[j])
+				f[i][j] = f[i-1][j-1] + 1;
+			else
+				f[i][j] = max(f[i-1][j], f[i][j-1]);
+		}
+	}
+	
+	cout << f[n][m] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+#### 最短编辑距离
+
+##### 1.题目介绍
+
+给定两个字符串 $A$ 和 $B$，现在要将 $A$ 经过若干操作变为 $B$，可进行的操作有：
+
+1.  删除–将字符串 $A$ 中的某个字符删除。
+2.  插入–在字符串 $A$ 的某个位置插入某个字符。
+3.  替换–将字符串 $A$ 中的某个字符替换为另一个字符。
+
+现在请你求出，将 $A$ 变为 $B$ 至少需要进行多少次操作。
+
+##### 2.题解 (C++)
+
+* **状态表示** `dp[i][j]`
+
+  * 集合 ： 所有吧a中的前i个字母 变成 b中前j个字母的集合的操作集合
+  * 属性 ： 所有操作中操作次数最少的方案的操作数
+    状态计算
+
+* **状态划分** 以对a中的第i个字母操作不同划分
+
+  * 在该字母之后添加
+    添加一个字母之后变得相同，说明没有添加前a的前i个已经和b的前j-1个已经相同
+    即 ： `dp[i][j] = dp[i][j-1] + 1`
+
+  * 删除该字母
+    删除该字母之后变得相同，说明没有删除前a中前i-1已经和b的前j个已经相同
+    即 ： `dp[i][j] = dp[i-1][j] + 1`
+
+  * 替换该字母
+
+    执行替换操作时需要判断一下`a[i]!=b[j]`
+
+    如果不相等需要替换，即： `dp[i][j] = dp[i-1][j-1] + 1`
+    如果相等则不需要执行替换，即： `dp[i][j] = dp[i-1`
+
+**C++代码**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010;
+
+char a[N], b[N];
+int f[N][N];
+
+void solve()
+{
+	int n,m;
+	cin >> n >> a + 1;
+	cin >> m >> b + 1;
+	
+	// A 字符串长度为 0 ，B 字符串长度为 i ，A 变为 B 字符串只能进行插入操作 
+	for (int i=1; i<=m; i++)
+		f[0][i] = i;
+	
+	// A 字符串长度为 i ，B 字符串长度为 0 ，A 变为 B 字符串只能进行删除操作 
+	for (int i=1; i<=n; i++)
+		f[i][0] = i;
+	
+	for (int i=1; i<=n; i++)
+		for (int j=1; j<=m; j++)
+		{
+			f[i][j] = min(f[i-1][j]+1, f[i][j-1]+1);
+			if (a[i]!=b[j])
+				f[i][j] = min(f[i][j], f[i-1][j-1]+1);
+			else
+				f[i][j] = min(f[i][j], f[i-1][j-1]);
+		}
+	
+	cout << f[n][m] << endl;
+}
+
+int main()
+{
+// 	int t;
+// 	cin >> t;
+// 	while (t--)
+// 	{
+// 		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+
+
+***
+
+### 区间DP
+
+##### 石子合并
+
+###### 1.题目介绍
+
+设有 $N$ 堆石子排成一排，其编号为 $1，2，3，…，N$。
+
+每堆石子有一定的质量，可以用一个整数来描述，现在要将这 $N$ 堆石子合并成为一堆。
+
+每次只能合并相邻的两堆，合并的代价为这两堆石子的质量之和，合并后与这两堆石子相邻的石子将和新堆相邻，合并时由于选择的顺序不同，合并的总代价也不相同。
+
+例如有 $4$ 堆石子分别为 `1 3 5 2`， 我们可以先合并 $1、2$ 堆，代价为 $4$，得到 `4 5 2`， 又合并 $1，2$ 堆，代价为 $9$，得到 `9 2` ，再合并得到 $11$，总代价为 $4+9+11=24$；
+
+如果第二步是先合并 $2，3$ 堆，则代价为 $7$，得到 `4 7`，最后一次合并代价为 $11$，总代价为 $4+7+11=22$。
+
+问题是：找出一种合理的方法，使总的代价最小，输出最小代价。
+
+***
+
+###### 2.题解(C++)
+
+
+
+![picture7](D:\Program Files (x86)\笔记\图片\picture7.png)
+
+![picture8](D:\Program Files (x86)\笔记\图片\picture8.png)
+
+关键点：最后一次合并一定是左边连续的一部分和右边连续的一部分进行合并
+
+**状态表示：**$f[i][j] $表示将 $i$ 到 $j$ 这一段石子合并成一堆的方案的集合，属性 Min
+
+**状态计算：**
+
+（1）  $i < j$ 时，$f[i][j] = \min\limits_{i\leq k \leq {j - 1}}{f[i][k]+f[k+1][j] + s[j] -s[i - 1]}$ 
+
+（2）$i = j$ 时， $f[i][i] = 0$ （合并一堆石子代价为 0）
+
+***
+
+**区间 DP 常用模版**
+
+所有的区间dp问题枚举时，第一维通常是枚举区间长度，并且一般 len = 1 时用来初始化，枚举从 len = 2 开始；第二维枚举起点 i （右端点 j 自动获得，j = i + len - 1）
+
+```c++
+for (int len=1; len<=n; len++)
+{
+    for (int i=1; i+len-1<=n; i++)
+    {
+        int l = i, r = i + len - 1;
+        if (len==1)
+        	f[l][r] = 0; // 当区间长度为1时，不需要移动，所以代价为0
+        for (int k=l; k<r; k++)
+        	f[l][r] = min(f[l][r], f[l][k] + f[k+1][r] + s[r] - s[l-1]);
+    }
+}
+```
+
+**C++代码**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 310, INF = 1e9;
+
+int s[N];
+int f[N][N];
+
+void solve()
+{
+	int n;
+	cin >> n;
+	for (int i=1; i<=n; i++)
+	{
+		cin >> s[i];
+		s[i] += s[i-1];
+	} // 获取读入并且计算前缀和
+	
+	for (int i=1; i<=n; i++)
+	    for (int j=1; j<=n; j++)
+	        f[i][j] = INF;
+	
+	for (int len=1; len<=n; len++)
+	{
+		for (int i=1; i+len-1<=n; i++)
+		{
+			int l = i, r = i + len - 1;
+			if (len==1)
+			    f[l][r] = 0; // 当区间长度为1时，不需要移动，所以代价为0
+			for (int k=l; k<r; k++)
+			{
+				f[l][r] = min(f[l][r], f[l][k] + f[k+1][r] + s[r] - s[l-1]);
+			}
+		}
+	}
+	
+	cout << f[1][n] << endl;
+}
+
+int main()
+{
+//	int t;
+//	cin >> t;
+//	while (t--)
+//	{
+//		solve();
+//	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+### 计数类DP
+
+##### 整数划分
+
+###### 1.题目介绍
+
+一个正整数 $n$ 可以表示成若干个正整数之和，形如：$n = n_1 + n_2 + … + n_k$，其中 $n_1 \ge n_2 \ge … \ge n_k, k \ge 1$。
+
+我们将这样的一种表示称为正整数 $n$ 的一种划分。
+
+现在给定一个正整数 $n$，请你求出 $n$ 共有多少种不同的划分方法。
+
+***
+
+##### 2.题解(C++)
+
+###### 2.1完全背包解法及优化 
+
+![picture9](D:\Program Files (x86)\笔记\图片\picture9.jpg)
+
+状态表示：
+$f[i][j]$ 表示从 $i$ 中选，背包恰重 $j$ 的方案数
+
+$f[i][j] = f[i-1][j] + f[i-1][j-i] + f[i-1][j-2i] + ... + f[i-1][j-si]$
+
+$f[i][j-i] = f[i-1][j-i] + f[i-1][j-2i] + ... + f[i-1][j-si]$
+
+状态转移方程：
+
+$f[i][j]=f[i−1][j]+f[i][j−i]$
+
+**代码**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010, mod = 1e9 + 7;
+
+int f[N];
+
+void solve()
+{
+	int n;
+	cin >> n;
+	
+	f[0] = 1;
+	
+	for (int i=1; i<=n; i++)
+		for (int j=i; j<=n; j++)
+			f[j] = (f[j] + f[j-i]) % mod;
+	
+	cout << f[n] << endl;
+}
+
+int main()
+{
+// 	int t;
+// 	cin >> t;
+// 	while (t--)
+// 	{
+// 		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+###### 2.2计数类DP
+
+![picture10](D:\Program Files (x86)\笔记\图片\picture10.jpg)
+
+状态表示：
+
+$f[i][j]$ 表示总和为 $i$ ，总个数为 $j$ 的方案数
+
+状态转移方程：
+
+$f[i][j]=f[i−1][j−1]+f[i−j][j]$
+
+**代码**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 1010, mod = 1e9 + 7;
+
+int f[N][N];
+
+void solve()
+{
+	int n;
+	cin >> n;
+	
+	f[0][0] = 1;
+	
+	for (int i=1; i<=n; i++)
+		for (int j=1; j<=i; j++)
+			f[i][j] = (f[i-1][j-1] + f[i-j][j]) % mod;
+	
+	int ans = 0;
+	for (int i=1; i<=n; i++) ans = (ans + f[n][i]) % mod;
+	
+	cout << ans << endl;
+}
+
+int main()
+{
+// 	int t;
+// 	cin >> t;
+// 	while (t--)
+// 	{
+// 		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+***
+
+### 状态压缩DP
+
+#### 蒙德里安的梦想
+
+##### 1.题目介绍
+
+求把 $N \times M$ 的棋盘分割成若干个 $1 \times 2$ 的长方形，有多少种方案。
+
+例如当 $N=2，M=4$ 时，共有 $5$ 种方案。当 $N=2，M=3$ 时，共有 $3$ 种方案。
+
+如下图所示：
+
+![picture11](D:\Program Files (x86)\笔记\图片\picture11.jpg)
+
+****
+
+## 搜索
+
+### 宽度优先搜索(BFS)
+
+#### 走迷宫
+
+##### 1题目介绍
+
+给定一个 $n \times m$ 的二维整数数组，用来表示一个迷宫，数组中只包含 $0$ 或 $1$，其中 $0$ 表示可以走的路，$1$ 表示不可通过的墙壁。
+
+最初，有一个人位于左上角 $(1, 1)$ 处，已知该人每次可以向上、下、左、右任意一个方向移动一个位置。
+
+请问，该人从左上角移动至右下角 $(n, m)$ 处，至少需要移动多少次。
+
+数据保证 $(1, 1)$ 处和 $(n, m)$ 处的数字为 $0$，且一定至少存在一条通路。
+
+###### 输入格式
+
+第一行包含两个整数 $n$ 和 $m$。
+
+接下来 $n$ 行，每行包含 $m$ 个整数（$0$ 或 $1$），表示完整的二维数组迷宫。
+
+###### 输出格式
+
+输出一个整数，表示从左上角移动至右下角的最少移动次数。
+
+###### 数据范围
+
+$1 \le n, m \le 100$
+
+###### 输入样例：
+
+    5 5
+    0 1 0 0 0
+    0 1 0 1 0
+    0 0 0 0 0
+    0 1 1 1 0
+    0 0 0 1 0
+
+
+###### 输出样例：
+
+    8
+
+##### 2.题解(C++)
+
+###### 2.1 输出最短的距离
+
+**思路**：从起点开始，往前走第一步，记录下所有第一步能走到的点，然后从所第一步能走到的点开始，往前走第二步，记录下所有第二步能走到的点，重复下去，直到走到终点。输出步数即可。
+
+**实现方式**： 宽度优先遍历
+
+* 用 g 存储地图，f存储起点到其他各个点的距离。
+* 从起点开始广度优先遍历地图。
+* 当地图遍历完，就求出了起点到各个点的距离，输出`f[n-1][m-1]`即可。
+
+![picture12](D:\Program Files (x86)\笔记\图片\picture12.png)
+
+* pair赋值时应该使用大括号`{}`或者使用`first`函数和`second`函数分别赋值
+* `int dx[] = {0,-1,0,1}, dy[] = {-1,0,1,0}`，遍历一个点上下左右四个点
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+typedef pair<int,int> PII;
+
+const int N = 110;
+
+int n,m;
+int a[N][N];
+int g[N][N];
+
+int bfs()
+{
+	memset(g,-1,sizeof a); //初始化为-1表示没有被走过
+	
+	g[0][0] = 0;
+	
+	queue<PII> q;
+	q.push({0,0});
+	int dx[] = {0,-1,0,1}, dy[] = {-1,0,1,0};
+	while (!q.empty())
+	{
+		for (int i=0; i<4; i++)
+		{
+			int x = q.front().first + dx[i], y = q.front().second + dy[i];
+			if (x>=0&&x<n&&y>=0&&y<m&&a[x][y]==0&&g[x][y]==-1) //没有出界并且是没有被走过的点
+			{
+				g[x][y] = g[q.front().first][q.front().second] + 1;
+				q.push({x,y});
+			}
+		}
+		q.pop();
+	}
+	
+	return g[n-1][m-1];
+}
+
+void solve()
+{
+	cin >> n >> m;
+	for (int i=0; i<n; i++)
+		for (int j=0; j<m; j++)
+			cin >> a[i][j];
+	
+	cout << bfs() << endl;
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+###### 2.2 打印路径
+
+打印路径只需要再额外开一个数组，记录每个点是由哪个点拓展到的，然后倒序输出经过的点
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+typedef pair<int,int> PII;
+
+const int N = 110;
+
+int n,m;
+int a[N][N];
+int g[N][N];
+PII h[N][N];
+
+int bfs()
+{
+	memset(g,-1,sizeof a);
+	
+	g[0][0] = 0;
+	h[0][0] = {0,0};
+	
+	queue<PII> q;
+	q.push({0,0});
+	int dx[] = {0,-1,0,1}, dy[] = {-1,0,1,0};
+	while (!q.empty())
+	{
+		for (int i=0; i<4; i++)
+		{
+			int x = q.front().first + dx[i], y = q.front().second + dy[i];
+			if (x>=0&&x<n&&y>=0&&y<m&&a[x][y]==0&&g[x][y]==-1)
+			{
+				g[x][y] = g[q.front().first][q.front().second] + 1;
+				h[x][y].first = q.front().first, h[x][y].second = q.front().second;
+				q.push({x,y});
+			}
+		}
+		q.pop();
+	}
+	
+	int x = n - 1, y = m - 1;
+	while (x||y)
+	{
+		cout << x << " " << y << endl;
+		auto t = h[x][y];
+		x = t.first, y = t.second;
+	}
+	
+	return g[n-1][m-1];
+}
+
+void solve()
+{
+	cin >> n >> m;
+	for (int i=0; i<n; i++)
+		for (int j=0; j<m; j++)
+			cin >> a[i][j];
+	
+	cout << bfs() << endl;
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+### 树与图的广度优先遍历
+
+#### 图中点的层次
+
+##### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的有向图，图中可能存在重边和自环。
+
+所有边的长度都是 $1$，点的编号为 $1 \sim n$。
+
+请你求出 $1$ 号点到 $n$ 号点的最短距离，如果从 $1$ 号点无法走到 $n$ 号点，输出 $-1$。
+
+##### 2.题解(C++)
+
+**树与图的存储**
+
+树是一种特殊的图，无向图可以看做特殊的有向图，所有只需要实现有向图的存储就可以了。
+
+图的存储有两种方式，一种是**邻接矩阵**，一种是**邻接表**。
+
+**邻接矩阵**适合存储稠密图，**邻接表**适合存储稀疏图。
+
+**邻接表**存储模板：
+
+```c++
+int h[N], e[N], ne[N], idx;
+
+void init()
+{
+    memset(h, -1, sizeof h);
+}
+
+void add(int a, int b)
+{
+    e[idx] = b, ne[idx] = h[a], h[a] = idx ++;
+}
+```
+
+核心思路是先使用邻接表存储图，然后再使用BFS一层一层向外搜，最后输出 n 号点的距离即可。
+
+代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 100010;
+
+int n, m;
+int h[N], e[N], ne[N], idx;
+int d[N]; //存储的是 1 号点到 n 号点的距离
+
+void add(int a, int b)
+{
+	e[idx] = b, ne[idx] = h[a], h[a] = idx ++;
+}
+
+int bfs()
+{
+	memset(d, -1, sizeof d); // 将距离全部初始化为 -1 表示没有搜过
+	
+	queue<int> q;
+	q.push(1);
+	d[1] = 0;
+	while (q.size())
+	{
+		int t = q.front();
+		q.pop();
+		for (int i=h[t]; i!=-1; i=ne[i])
+		{
+			if (d[e[i]]==-1)
+			{
+				d[e[i]] = d[t] + 1;
+				q.push(e[i]);
+			}
+		}
+	}
+	
+	return d[n];
+}
+
+void solve()
+{
+	memset(h, -1, sizeof h);
+	
+	cin >> n >> m;
+	for (int i=0; i<m; i++)
+	{
+		int a, b;
+		cin >> a >> b;
+		add(a,b); 
+	}
+	
+	cout << bfs() << endl;
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+### 拓扑排序
+
+#### 有向图的拓扑序列
+
+##### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的有向图，点的编号是 $1$ 到 $n$，图中可能存在重边和自环。
+
+请输出任意一个该有向图的拓扑序列，如果拓扑序列不存在，则输出 $-1$。
+
+**若一个由图中所有点构成的序列 $A$ 满足：对于图中的每条边 $(x, y)$，$x$ 在 $A$ 中都出现在 $y$ 之前，则称 $A$ 是该图的一个拓扑序列。**
+
+##### 2.题解(C++)
+
+**拓扑排序**是什么：
+
+* 只有有向图有拓扑序列，无向图没有拓扑序列。
+* 一个有向图，如果图中有入度为 0 的点，就把这个点删掉，同时也删掉这个点所连的边。
+
+* 一直进行上面出处理，如果所有点都能被删掉，则这个图可以进行拓扑排序。
+
+* 由拓扑排序的性质可知，有拓扑序列的一定是无环图。有环图一定存在一个环，这个环上的点入度一定不为 0 。
+
+**解题思路**：
+
+* 首先记录各个点的入度
+
+* 然后将入度为 0 的点放入队列
+
+* 将队列里的点依次出队列，然后找出所有出队列这个点发出的边，删除边，同时边的另一侧的点的入度 -1。
+
+* 如果所有点都进过队列，则可以拓扑排序，输出所有顶点。否则输出-1，代表不可以进行拓扑排序。
+* 这道题用数组手动模拟队列，如果可以拓扑排序，数组中点的顺序刚好是一组拓扑序列，直接输出即可，不需要再额外保存；如果使用 STL 中的 queue ，需要额外保存。
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+#include <vector>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 100010;
+
+int n, m;
+int h[N], e[N], ne[N], idx;
+int d[N], q[N];
+
+void add(int a, int b)
+{
+	e[idx] = b, ne[idx] = h[a], h[a] = idx ++;
+}
+
+bool topsort()
+{
+	int hh = 0, tt = -1;
+	
+	for (int i=1; i<=n; i++)
+		if (d[i]==0)
+			q[++ tt] = i;
+	
+	while (hh <= tt)
+	{
+		int t = q[hh ++];
+		for (int i=h[t]; i!=-1; i=ne[i])
+		{
+		    int x = e[i];
+			d[x] --;
+			if (d[x]==0)
+				q[++ tt] = x;
+		}
+	}
+	
+	return tt == n - 1;
+}
+
+void solve()
+{
+	memset(h, -1, sizeof h);
+	
+	cin >> n >> m;
+	for (int i=0; i<m; i++)
+	{
+		int a, b;
+		cin >> a >> b;
+		add(a,b);
+		d[b] ++;
+	}
+	
+	if (topsort())
+	{
+		for (int i=0; i<n; i++)
+			cout << q[i] << " ";
+		puts("");
+	}
+	else
+		cout << -1 << endl;
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+### 最短路
+
+一个有 n 个点 m 条边的图，我们认为如果 m 和 n^2^ 一个数量级，就认为该图是一个稠密图，如果 m 和 n 一个数量级，就认为该图是一个稀疏图。
+
+#### Dijkstra算法
+
+##### Dijkstra求最短路
+
+###### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的有向图，图中可能存在重边和自环，所有边权均为正值。
+
+请你求出 $1$ 号点到 $n$ 号点的最短距离，如果无法从 $1$ 号点走到 $n$ 号点，则输出 $-1$。
+
+###### 2.题解(C++)
+
+Dijkstra算法采用的是一种贪心的策略。
+
+Dijkstra 算法适用于求正权有向图中，源点到其余各个节点的最短路径。注意：图中可以有环，但不能有负权边。
+
+求源点到其余各点的最短距离步骤如下：
+
+1. 用一个 dist 数组保存源点到其余各个节点的距离，dist[i] 表示源点到节点 i 的距离。初始时，dist 数组的各个元素为无穷大。
+   用一个状态数组 st 记录是否找到了源点到该节点的最短距离，st[i] 如果为真，则表示找到了源点到节点 i 的最短距离，st[i] 如果为假，则表示源点到节点 i 的最短距离还没有找到。初始时，st 各个元素为假。
+2. 源点到源点的距离为 0。即`dist[1]` = 0。
+3. 遍历 `dist` 数组，找到一个节点，这个节点是：没有确定最短路径的节点中距离源点最近的点。假设该节点编号为 `i` 。此时就找到了源点到该节点的最短距离，`st[i]` 置为 1。
+4. 遍历 i 所有可以到达的节点 j，如果 dist[j] 大于 dist[i] 加上 i -> j 的距离，即 dist[j] > dist[i] + w[i][j]（w[i][j] 为 i -> j 的距离） ，则更新 dist[j] = dist[i] + w[i][j]。
+5. 重复 3 4 步骤，直到所有节点的状态都被置为 1。
+
+Dijkstra算法有两种实现方式，一种朴素版，适合用于稠密图，另一种是堆优化版，适合用于稀疏图。
+
+---
+
+**朴素版**
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 510;
+
+int n, m;
+int g[N][N];
+int dist[N];
+bool st[N];
+
+int dijkstra()
+{
+	memset(dist, 0x3f, sizeof dist);
+	
+	dist[1] = 0;
+	
+	for (int i=0; i<n; i++)
+	{
+		int t = -1;
+		for (int j=1; j<=n; j++)
+		{
+			if (!st[j]&&(t==-1||dist[t]>dist[j]))
+				t = j;
+		}
+		
+		st[t] = true;
+		
+		for (int j=1; j<=n; j++)
+		{
+			dist[j] = min(dist[j], dist[t] + g[t][j]);
+		}
+	}
+	
+	if (dist[n] == 0x3f3f3f3f)
+		return -1;
+	else
+		return dist[n];
+}
+
+void solve()
+{
+    memset(g, 0x3f, sizeof g);
+    
+	cin >> n >> m;
+	for (int i=0; i<m; i++)
+	{
+		int a,b,c;
+		cin >> a >> b >> c;
+		g[a][b] = min(g[a][b], c);
+	}
+	
+	cout << dijkstra() << endl;
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+---
+
+**堆优化版**
+
+朴素版dijkstra算法每次确定点的时间复杂度是 O(n)，每次修改边的时间复杂度是 O(1)，堆优化版是用一个堆来维护整个集合，每次确定点的时间复杂度是 O(1)，但是每次修改边的时间复杂度是 O(m)
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue> 
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+typedef pair<int, int> PII;
+
+const int N = 150010;
+
+int n, m;
+int h[N], e[N], w[N], ne[N], idx;
+int dist[N];
+bool st[N];
+
+void add(int a, int b, int c)
+{
+	e[idx] = b, w[idx] = c, ne[idx] = h[a], h[a] = idx ++;
+}
+
+int dijkstra()
+{
+	memset(dist, 0x3f, sizeof dist);
+	
+	dist[1] = 0;
+	
+	priority_queue<PII, vector<PII>, greater<PII>> q;
+	q.push({0,1}); // frist 存储距离， second 存储标号
+	
+	while (q.size())
+	{
+		auto t = q.top();
+		q.pop();
+		int distance = t.first, ver = t.second;
+		
+		if (st[ver]) continue;
+		st[ver] = true;
+		
+		for (int j=h[ver]; j!=-1; j=ne[j])
+		{
+		    if (dist[e[j]]>distance+w[j])
+		    {
+		        dist[e[j]] = distance + w[j];
+		        q.push({dist[e[j]],e[j]});
+		    }
+		}
+	}
+	
+	if (dist[n]==0x3f3f3f3f)
+		return -1;
+	else
+		return dist[n];
+}
+
+void solve()
+{
+	memset(h, -1, sizeof h);
+	
+	cin >> n >> m;
+	for (int i=0; i<m; i++)
+	{
+		int a,b,c;
+		cin >> a >> b >> c;
+		add(a,b,c);
+	}
+	
+	cout << dijkstra() << endl;
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+#### bellman_ford算法
+
+bellman_ford算法可以解决有边数限制的最短路。
+
+##### 有边数限制的最短路
+
+###### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的有向图，图中可能存在重边和自环， **边权可能为负数**。
+
+请你求出从 $1$ 号点到 $n$ 号点的最多经过 $k$ 条边的最短距离，如果无法从 $1$ 号点走到 $n$ 号点，输出 `impossible`。
+
+注意：图中可能 **存在负权回路** 。
+
+###### 2.题解(c++)
+
+**算法步骤**
+
+1. 初始化dist数组为正无穷，`dist[1]=0`;
+2. （外重循环）循环 i 从1到 n ，遍历 n 次指的：是不经过i条边到达终点的最短距离，经过n次操作n个点的最短距离也就确定了；（内重循环）循环j从1到m，遍历m条边，把所有边都进行松弛操作；
+3. 每次取出两点以及他们连接的边的权重（a,b,w表示a—>b的一条边，权重为w）；
+4. 用从起点到a的当前最短距离+权重来更新从起点到b的当前最短距离；`dist[b]=min(dist[b],dist[a]+w)`;
+
+
+**backup的作用**
+backup[j]表示每次进入第2重循环的dist数组的备份。
+如果不加这个备份的话有可能会发生节点最短距离的串连；
+
+**为什么是dist[n]>0x3f3f3f3f/2， 而不是dist[n]==0x3f3f3f3f**
+因为图中是有负权边的，最后不连通时的无穷大不一定是0x3f3f3f3f，可能会比0x3f3f3f3f小一些。
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 510, M = 10010;
+
+struct edge{
+	int a,b,w;
+}edges[M];
+
+int n, m, k;
+int dist[N], backup[N];
+
+void bellman_fold()
+{
+	memset(dist, 0x3f, sizeof dist);
+	
+	dist[1] = 0;
+	
+	for (int i=1; i<=k; i++)
+	{
+		memcpy(backup, dist, sizeof dist);
+		for (int j=1; j<=m; j++)
+		{
+			auto x = edges[j];
+			dist[x.b] = min(dist[x.b], backup[x.a]+x.w);
+		}
+	}
+}
+
+void solve()
+{
+	cin >> n >> m >> k;
+	for (int i=1; i<=m; i++)
+	{
+		int a,b,w;
+		cin >> a >> b >> w;
+		edges[i] = {a,b,w};
+	}
+	
+	bellman_fold();
+	
+	if (dist[n]>0x3f3f3f3f/2)
+		cout << "impossible\n";
+	else
+		cout << dist[n] << endl;
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+#### SPFA算法
+
+SPFA算法可以求有负权边的最短路，也可以用来判断是否存在负权边。
+
+##### spfa求最短路
+
+###### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的有向图，图中可能存在重边和自环， **边权可能为负数**。
+
+请你求出 $1$ 号点到 $n$ 号点的最短距离，如果无法从 $1$ 号点走到 $n$ 号点，则输出 `impossible`。
+
+数据保证不存在负权回路。
+
+###### 2.题解(C++)
+
+Bellman_ford算法会遍历所有的边，但是有很多的边遍历了其实没有什么意义，我们只用遍历那些到源点距离变小的点所连接的边即可，只有当一个点的前驱结点更新了，该节点才会得到更新；因此考虑到这一点，我们将创建一个队列每一次加入距离被更新的结点。
+
+**步骤**
+
+ * 建立一个队列，初始时队列里只有起始点。
+ * 再建立一个数组记录起始点到所有点的最短路径（该表格的初始值要赋为极大值，该点到他本身的路径赋为0）。
+ * 再建立一个数组，标记点是否在队列中。
+ * 队头不断出队，计算始点起点经过队头到其他点的距离是否变短，如果变短且被点不在队列中，则把该点加入到队尾。
+ * 重复执行直到队列为空。
+ * 在保存最短路径的数组中，就得到了最短路径。
+
+
+
+``` c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 100010;
+
+int n, m;
+int h[N], e[N], w[N], ne[N], idx;
+int dist[N];
+bool st[N];
+
+void add(int a, int b, int c)
+{
+	e[idx] = b, w[idx] = c, ne[idx] = h[a], h[a] = idx ++;
+}
+
+void spfa()
+{
+	memset(dist, 0x3f, sizeof dist);
+	
+	dist[1] = 0;
+	st[1] = true;
+	
+	queue<int> q;
+	q.push(1);
+	
+	while (q.size())
+	{
+		int x = q.front();
+		q.pop();
+		
+		st[x] = false;
+		
+		for (int j=h[x]; j!=-1; j=ne[j])
+		{
+			if (dist[e[j]]>dist[x]+w[j])
+			{
+				dist[e[j]] = dist[x] + w[j];
+				if (!st[e[j]])
+				{
+					st[e[j]] = true;
+					q.push(e[j]);
+				}
+			}
+		}
+	}
+}
+
+void solve()
+{
+	memset(h, -1, sizeof h);
+	
+	cin >> n >> m;
+	for (int i=0; i<m; i++)
+	{
+		int a,b,c;
+		cin >> a >> b >> c;
+		add(a,b,c);
+	}
+	
+	spfa();
+	
+	if (dist[n]==0x3f3f3f3f)
+		cout << "impossible\n";
+	else
+		cout << dist[n];
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+
+
+##### spfa判断负环
+
+###### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的有向图，图中可能存在重边和自环， **边权可能为负数**。
+
+请你判断图中是否存在负权回路。
+
+###### 2.题解(C++)
+
+统计当前每个点的最短路中所包含的边数，如果某点的最短路所包含的边数大于等于n，则说明存在环。
+判断负环时不需要初始化为无穷大的原因是题目只需要判断负环是否存在，不需要具体的数值，初始值为 0 和无穷大对于判断负环来说效果是一样的。
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 2010, M = 10010;
+
+int n, m;
+int h[M], e[M], ne[M], w[M], idx;
+int dist[N], cnt[N];
+bool st[N];
+
+void add(int a, int b, int c)
+{
+	e[idx] = b, w[idx] = c, ne[idx] = h[a], h[a] = idx ++;
+}
+
+bool spfa()
+{
+	queue<int> q;
+	
+	for (int i=1; i<=n; i++)
+	{
+		q.push(i);
+		st[i] = true;
+	}
+	
+	while (q.size())
+	{
+		int x = q.front();
+		q.pop();
+		st[x] = false;
+		
+		for (int j=h[x]; j!=-1; j=ne[j])
+		{
+			if (dist[e[j]]>dist[x]+w[j])
+			{
+				dist[e[j]] = dist[x] + w[j];
+				cnt[e[j]] = cnt[x] + 1;
+				if (cnt[e[j]]>n) return true;
+				if (!st[e[j]])
+				{
+					q.push(e[j]);
+					st[e[j]] = true;
+				}
+			}
+		}
+	}
+	
+	return false;
+}
+
+void solve()
+{
+	memset(h, -1, sizeof h);
+	
+	cin >> n >> m;
+	for (int i=0; i<m; i++)
+	{
+		int a,b,c;
+		cin >> a >> b >> c;
+		add(a,b,c);
+	}
+	
+	if (spfa())
+		cout << "Yes\n";
+	else
+		cout << "No\n";
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+#### Floyd算法
+
+##### Floyd求最短路
+
+###### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的有向图，图中可能存在重边和自环，边权可能为负数。
+
+再给定 $k$ 个询问，每个询问包含两个整数 $x$ 和 $y$，表示查询从点 $x$ 到点 $y$ 的最短距离，如果路径不存在，则输出 `impossible`。
+
+数据保证图中不存在负权回路。
+
+###### 2.题解(C++)
+
+* `f[i, j, k]`表示从`i`走到`j`的路径上除`i`和`j`点外只经过`1`到`k`的点的所有路径的最短距离。那么`f[i, j, k] = min(f[i, j, k - 1)`, `f[i, k, k - 1] + f[k, j, k - 1]`。
+  因此在计算第`k`层的`f[i, j]`的时候必须先将第`k - 1`层的所有状态计算出来，所以需要把`k`放在最外层。
+
+* 读入邻接矩阵，将次通过动态规划装换成从`i`到`j`的最短距离矩阵。
+
+* 在下面代码中，判断从`a`到`b`是否是无穷大距离时，需要进行`if(t > INF/2)`判断，而并非是`if(t == INF)`判断，原因是`INF`是一个确定的值，并非真正的无穷大，会随着其他数值而受到影响，`t`大于某个与`INF`相同数量级的数即可。
+
+
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+#include <queue>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 210, M = 20010, INF = 1e9;
+
+int n, m, k;
+int dist[N][N];
+
+void floyd()
+{
+	for (int k=1; k<=n; k++)
+		for (int i=1; i<=n; i++)
+			for (int j=1; j<=n; j++)
+				dist[i][j] = min(dist[i][j], dist[i][k]+dist[k][j]);
+}
+
+void solve()
+{
+	for (int i=0; i<N; i++)
+		for (int j=0; j<N; j++)
+			if (i==j) dist[i][j] = 0;
+			else dist[i][j] = INF;
+	
+	cin >> n >> m >> k;
+	for (int i=0; i<m; i++)
+	{
+		int a,b,c;
+		cin >> a >> b >> c;
+		dist[a][b] = min(dist[a][b], c);
+	}
+	
+	floyd();
+	
+	while (k--)
+	{
+		int x,y;
+		cin >> x >> y;
+		if (dist[x][y]>INF/2)
+			cout << "impossible\n";
+		else
+			cout << dist[x][y] << endl;
+	}
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+### 最小生成树
+
+**定义**：一个有 n 个结点的连通图的生成树是原图的极小连通子图，且包含原图中的所有 n 个结点，并且有保持图连通的最少的边。
+
+#### Prim算法
+
+##### Prim算法求最小生成树
+
+###### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的无向图，图中可能存在重边和自环，边权可能为负数。
+
+求最小生成树的树边权重之和，如果最小生成树不存在则输出 `impossible`。
+
+给定一张边带权的无向图 $G=(V,E)$，其中 $V$ 表示图中点的集合，$E$ 表示图中边的集合，$n=|V|$，$m=|E|$。
+
+由 $V$ 中的全部 $n$ 个顶点和 $E$ 中 $n−1$ 条边构成的无向连通子图被称为 $G$ 的一棵生成树，其中边的权值之和最小的生成树被称为无向图 $G$ 的最小生成树。
+
+###### 2.题解(C++)
+
+要将所有点连通起来，并且边长之和最小，步骤如下：
+
+1. 用一个 `st` 数组表示节点是否已经连通。`st[i]` 为真，表示已经连通，`st[i]` 为假，表示还没有连通。初始时，`st` 各个元素为假。即所有点还没有连通。
+   用一个 `dist` 数组保存各个点到连通部分的最短距离，`dist[i]` 表示 $i$ 节点到连通部分的最短距离。初始时，`dist` 数组的各个元素为无穷大。
+2. 从 1 号节点开始扩充连通的部分，所以 1 号节点与连通部分的最短距离为 0，即`disti[1]` 置为 0。
+3. 遍历 `dist` 数组，找到一个还没有连通起来，但是距离连通部分最近的点，假设该节点的编号是 $i$ 。$i$ 节点就是下一个应该加入连通部分的节点，`stata[i]` 置为 $1$ 。
+4. 遍历所有与 i 相连但没有加入到连通部分的点 j，如果 j 距离连通部分的距离大于 i j 之间的距离，即 `dist[j] > w[i][j]`（w[i][j] 为 i j 节点之间的距离），则更新 `dist[j] = w[i][j]`。这时候表示，j 到连通部分的最短方式是和 i 相连。
+5. 重复 3、 4步骤，直到所有节点的状态都被置为 1.
+
+
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 510;
+
+int n, m;
+int g[N][N];
+int dist[N];
+bool st[N];
+int res;
+
+bool prim()
+{
+	memset(dist, 0x3f, sizeof dist);
+	
+	for (int i=0; i<n; i++)
+	{
+		int t = -1;
+		for (int j=1; j<=n; j++)
+			if (!st[j]&&(t==-1||dist[t]>dist[j]))
+				t = j;
+		
+		if (i&&dist[t]==0x3f3f3f3f) return false;
+		
+		st[t] = true;
+		
+		if (i) res += dist[t];
+		
+		for (int j=1; j<=n; j++)
+		{
+			dist[j] = min(dist[j], g[t][j]);
+		}
+	}
+	
+	return true;
+}
+
+void solve()
+{
+	memset(g, 0x3f, sizeof g);
+	
+	cin >> n >> m;
+	while (m--)
+	{
+		int a,b,c;
+		cin >> a >> b >> c;
+		g[a][b] = min(g[a][b], c);
+		g[b][a] = min(g[b][a], c);
+	}
+	
+	bool flag = prim();
+	if (flag)
+		cout << res << endl;
+	else
+		cout << "impossible\n";
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+与Dijkstra类似，Prim算法也可以用堆优化，优先队列代替堆，优化的Prim算法时间复杂度 $O(mlogn)$ 。适用于稀疏图，但是稀疏图的时候求最小生成树，Kruskal 算法更加实用。
+
+#### Kruskal算法
+
+##### Kruskal算法求最小生成树
+
+###### 1.题目介绍
+
+给定一个 $n$ 个点 $m$ 条边的无向图，图中可能存在重边和自环，边权可能为负数。
+
+求最小生成树的树边权重之和，如果最小生成树不存在则输出 `impossible`。
+
+给定一张边带权的无向图 $G=(V,E)$，其中 $V$ 表示图中点的集合，$E$ 表示图中边的集合，$n=|V|$，$m=|E|$。
+
+由 $V$ 中的全部 $n$ 个顶点和 $E$ 中 $n−1$ 条边构成的无向连通子图被称为 $G$ 的一棵生成树，其中边的权值之和最小的生成树被称为无向图 $G$ 的最小生成树。
+
+###### 2.题解(C++)
+
+**算法思路**：
+
+* 将所有边按照权值的大小进行升序排序，然后依次从小到大判断。
+
+* 如果这个边与之前选择的所有边不会组成回路，就选择这条边分；反之，舍去。
+
+* 直到具有 n 个顶点的连通网筛选出来 n-1 条边为止。
+
+* 筛选出来的边和所有的顶点构成此连通网的最小生成树。
+
+判断是否会产生回路的方法为：使用**并查集**。
+
+* 在初始状态下给各个个顶点在不同的集合中。、
+
+* 遍历过程的每条边，判断这两个顶点的是否在一个集合中。
+
+* 如果边上的这两个顶点在一个集合中，说明两个顶点已经连通，这条边不要。如果不在一个集合中，则要这条边。
+
+
+
+```c++
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <algorithm>
+#include <cmath>
+
+using namespace std;
+
+#define endl "\n"
+
+typedef long long LL;
+
+const int N = 100010, M = 200010;
+
+struct edge{
+	int a,b,w;
+	
+	bool operator< (const edge& W) const {
+		return w < W.w;
+	}
+}edges[M];
+
+int n, m;
+int p[N];
+
+int find(int x)
+{
+	if (p[x]!=x) p[x] = find(p[x]);
+	else return x;
+}
+
+void kruskal()
+{
+	sort(edges, edges+m);
+	
+	for (int i=0; i<n; i++)
+		p[i] = i;
+	int res = 0, cnt = 0;
+	for (int i=0; i<m; i++)
+	{
+		edge j = edges[i];
+		if (find(j.a)!=find(j.b))
+		{
+			p[find(j.a)] = find(j.b);
+			res += j.w;
+			cnt ++;
+		}
+	}
+	
+	if (cnt<n-1)
+		cout << "impossible\n";
+	else
+		cout << res << endl;
+}
+
+void solve()
+{
+	cin >> n >> m;
+	for (int i=0; i<m; i++)
+	{
+		int a,b,w;
+		cin >> a >> b >> w;
+		edges[i] = {a,b,w};
+	}
+	
+	kruskal();
+}
+
+int main()
+{
+// 	int t;
+//     cin >> t;
+//     while (t--)
+// 	{
+//   		solve();
+// 	}
+	solve();
+	return 0;
+}
+```
+
+## 基础算法
+
+### 离散化
+
+#### 区间和
+
+##### 1.题目介绍
+
+假定有一个无限长的数轴，数轴上每个坐标上的数都是 $0$。
+
+现在，我们首先进行 $n$ 次操作，每次操作将某一位置 $x$ 上的数加 $c$。
+
+接下来，进行 $m$ 次询问，每个询问包含两个整数 $l$ 和 $r$，你需要求出在区间 $[l,r]$ 之间的所有数的和。
+
+##### 2.题解(C++)
+
+
+
+```c++
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int N = 300010;
+
+typedef pair<int,int> PII;
+
+int n,m;
+int a[N]; //存储坐标插入的值
+int s[N]; //存储数组a的前缀和
+
+vector<int> alls; //存储（所有与插入和查询有关的）坐标
+vector<PII> add, query; //存储插入和询问操作的数据
+
+int find(int x) //返回的是输入的坐标的离散化下标
+{
+	int l = 0,r = alls.size() - 1;
+	while (l < r)
+	{
+		int mid = (l + r) >> 1;
+		if (alls[mid] >= x) r = mid;
+		else l = mid +1;
+	}
+	
+	return r + 1;
+}
+
+int main()
+{
+	cin >> n >> m;
+	for (int i=1; i<=n; i++)
+	{
+		int x,c;
+		cin >> x >> c;
+		add.push_back({x,c});
+		alls.push_back(x);  
+	}
+	for (int i=1; i<=m; i++)
+	{
+		int l,r;
+		cin >> l >> r;
+		query.push_back({l,r});
+		
+		alls.push_back(l);
+		alls.push_back(r);   
+	}
+	
+	//去重 
+	sort(alls.begin(), alls.end());
+	alls.erase(unique(alls.begin(), alls.end()), alls.end());
+	
+	//处理插入
+	for (auto item : add)
+	{
+		int x = find(item.first);
+		a[x] += item.second;
+	}
+	
+	//预处理前缀和 
+	for (int i=1; i<=alls.size(); i++) s[i] = s[i-1] + a[i];
+	
+	//处理询问 
+	for (auto item : query)
+	{
+		int l = find(item.first), r = find(item.second);
+		cout << s[r] - s[l-1] << endl;
+	}
+	
+	return 0;
+}
+```
+
+
+
